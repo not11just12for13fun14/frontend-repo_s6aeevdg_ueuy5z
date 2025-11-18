@@ -1,71 +1,90 @@
+import { useState } from 'react'
+import Hero from './components/Hero'
+import ProductGrid from './components/ProductGrid'
+import Cart from './components/Cart'
+
 function App() {
+  const [cart, setCart] = useState([])
+
+  const addToCart = (product) => {
+    setCart((prev) => {
+      const existing = prev.find((p) => p._id === product._id)
+      if (existing) {
+        return prev.map((p) => (p._id === product._id ? { ...p, qty: p.qty + 1 } : p))
+      }
+      return [...prev, { ...product, qty: 1 }]
+    })
+  }
+
+  const removeFromCart = (id) => {
+    setCart((prev) => prev.filter((p) => p._id !== id))
+  }
+
+  const checkout = async () => {
+    const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
+    const items = cart.map((c) => ({ product_id: c._id, quantity: c.qty }))
+    const total = cart.reduce((sum, it) => sum + it.price * it.qty, 0)
+    const demoCustomer = {
+      customer_name: 'Bee Lover',
+      customer_email: 'customer@example.com',
+      customer_address: '123 Honeycomb Lane',
+      notes: 'Handle with care',
+      items,
+      total,
+    }
+    try {
+      const res = await fetch(`${baseUrl}/api/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(demoCustomer),
+      })
+      if (!res.ok) throw new Error('Checkout failed')
+      const data = await res.json()
+      alert(`Order placed! ID: ${data.id}`)
+      setCart([])
+    } catch (e) {
+      alert(e.message)
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Subtle pattern overlay */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.05),transparent_50%)]"></div>
-
-      <div className="relative min-h-screen flex items-center justify-center p-8">
-        <div className="max-w-2xl w-full">
-          {/* Header with Flames icon */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center mb-6">
-              <img
-                src="/flame-icon.svg"
-                alt="Flames"
-                className="w-24 h-24 drop-shadow-[0_0_25px_rgba(59,130,246,0.5)]"
-              />
-            </div>
-
-            <h1 className="text-5xl font-bold text-white mb-4 tracking-tight">
-              Flames Blue
-            </h1>
-
-            <p className="text-xl text-blue-200 mb-6">
-              Build applications through conversation
-            </p>
-          </div>
-
-          {/* Instructions */}
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-blue-500/20 rounded-2xl p-8 shadow-xl mb-6">
-            <div className="flex items-start gap-4 mb-6">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-lg flex items-center justify-center font-bold">
-                1
-              </div>
-              <div>
-                <h3 className="font-semibold text-white mb-1">Describe your idea</h3>
-                <p className="text-blue-200/80 text-sm">Use the chat panel on the left to tell the AI what you want to build</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4 mb-6">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-lg flex items-center justify-center font-bold">
-                2
-              </div>
-              <div>
-                <h3 className="font-semibold text-white mb-1">Watch it build</h3>
-                <p className="text-blue-200/80 text-sm">Your app will appear in this preview as the AI generates the code</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-lg flex items-center justify-center font-bold">
-                3
-              </div>
-              <div>
-                <h3 className="font-semibold text-white mb-1">Refine and iterate</h3>
-                <p className="text-blue-200/80 text-sm">Continue the conversation to add features and make changes</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="text-center">
-            <p className="text-sm text-blue-300/60">
-              No coding required • Just describe what you want
-            </p>
-          </div>
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-20 backdrop-blur bg-amber-50/70 ring-1 ring-amber-200/60">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <a href="/" className="text-2xl font-extrabold text-amber-900">BeeMart</a>
+          <nav className="text-amber-800/90 flex items-center gap-6 text-sm">
+            <a href="#shop" className="hover:underline">Shop</a>
+            <a href="#learn" className="hover:underline">Learn</a>
+            <a href="/test" className="hover:underline">System</a>
+          </nav>
         </div>
-      </div>
+      </header>
+
+      <Hero />
+
+      <main className="max-w-6xl mx-auto px-6 pb-24">
+        <section className="grid lg:grid-cols-[1fr_360px] gap-8 items-start">
+          <ProductGrid onAdd={addToCart} />
+          <Cart items={cart} onCheckout={checkout} onRemove={removeFromCart} />
+        </section>
+
+        <section id="learn" className="mt-24 bg-white rounded-2xl shadow ring-1 ring-amber-200/60 p-8">
+          <h2 className="text-2xl font-bold text-amber-900">Responsible Bee Purchasing</h2>
+          <ul className="mt-4 list-disc pl-6 text-amber-800/90 space-y-2 text-sm">
+            <li>Always check local regulations for keeping bees in your area.</li>
+            <li>Source from ethical breeders and avoid transporting invasive species.</li>
+            <li>Provide proper housing, water, and seasonal care.</li>
+            <li>Consider local pollinator-friendly plants to support healthy forage.</li>
+          </ul>
+        </section>
+      </main>
+
+      <footer className="bg-amber-900 text-amber-100 py-10 mt-auto">
+        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <p>© {new Date().getFullYear()} BeeMart. All rights reserved.</p>
+          <p className="text-amber-200/80">Be kind to pollinators ♡</p>
+        </div>
+      </footer>
     </div>
   )
 }
